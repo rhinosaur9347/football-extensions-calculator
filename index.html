@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Rising Phoenix — Contract Extension Calculator</title>
+<link rel="icon" type="image/x-icon" href="./favicon.ico" />
+<link rel="icon" type="image/png" sizes="192x192" href="./favicon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="./favicon-512.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png" />
+<meta name="theme-color" content="#0c1a3a" />
+<style>
+  /* ---------- Theme ---------- */
+  :root {
+    --navy:        #0c1a3a;
+    --navy-deep:   #07122a;
+    --navy-card:   #142552;
+    --navy-line:   #243874;
+    --orange:      #e84a1e;
+    --orange-soft: #f08054;
+    --cream:       #f0e6d2;
+    --cream-dim:   #c9bfa9;
+    --gold:        #d4a23e;
+    --green:       #6dcf6a;
+    --red:         #ff6b6b;
+    --shadow:      0 10px 40px rgba(0,0,0,0.45);
+    --radius:      14px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  /* Solid navy on html so iOS rubber-band overscroll never flashes white,
+     and so the area behind translucent system bars (status bar, address bar)
+     stays in-palette. */
+  html {
+    background: var(--navy-deep);
+  }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: radial-gradient(ellipse at top, #15265a 0%, var(--navy) 40%, var(--navy-deep) 100%);
+    background-attachment: fixed;     /* gradient stays put on scroll */
+    color: var(--cream);
+    min-height: 100vh;
+    min-height: 100dvh;               /* dynamic viewport height — handles iOS UI bars */
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+
+  a { color: var(--orange-soft); text-decoration: none; }
+  a:hover { color: var(--orange); text-decoration: underline; }
+
+  .wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 32px 20px 80px;
+  }
+
+  /* ---------- App-bar header ---------- */
+  .header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--navy-line);
+    text-align: left;
+  }
+  /* Logo container — sized for the transparent-background phoenix logo
+     (natural aspect ~1.38). Sits left of the title in the app-bar. */
+  .logo-box {
+    width: 96px;
+    flex-shrink: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .logo-box img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .logo-box svg.fallback { width: 100%; height: auto; aspect-ratio: 280 / 200; }
+  h1 {
+    font-family: 'Bebas Neue', 'Oswald', 'Arial Narrow', sans-serif;
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    margin: 0;
+    color: var(--cream);
+    line-height: 1.18;
+    flex: 1;
+    min-width: 0;
+  }
+  h1 .brand {
+    color: var(--orange);
+    display: block;        /* force break before "Contract Extension Calculator" */
+    margin-bottom: 2px;
+  }
+
+  /* ---------- Card ---------- */
+  .card {
+    background: linear-gradient(180deg, var(--navy-card) 0%, #0e1d44 100%);
+    border: 1px solid var(--navy-line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    margin-bottom: 22px;
+  }
+  .card h2 {
+    font-family: 'Bebas Neue', 'Oswald', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--orange);
+    text-transform: uppercase;
+    font-size: 18px;
+    margin: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--orange);
+    display: inline-block;
+  }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 18px;
+  }
+  .reset-btn {
+    background: transparent;
+    border: 1px solid var(--navy-line);
+    color: var(--cream-dim);
+    padding: 7px 14px;
+    border-radius: 6px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .reset-btn:hover {
+    border-color: var(--orange-soft);
+    color: var(--orange-soft);
+  }
+  .reset-btn:active {
+    transform: scale(0.97);
+  }
+  .reset-btn .icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  label.field-label {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+
+  /* ---------- Position chips ---------- */
+  .pos-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .pos-chip {
+    background: transparent;
+    border: 1.5px solid var(--navy-line);
+    color: var(--cream);
+    padding: 12px 4px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+  }
+  .pos-chip:hover { border-color: var(--orange-soft); color: var(--orange-soft); }
+  .pos-chip.active {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: white;
+    box-shadow: 0 4px 14px rgba(232,74,30,0.4);
+  }
+
+  /* ---------- Inputs ---------- */
+  .input-row { margin-top: 22px; }
+  input[type="number"] {
+    background: var(--navy-deep);
+    border: 1.5px solid var(--navy-line);
+    color: var(--cream);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 600;
+    width: 140px;
+    font-family: inherit;
+  }
+  input[type="number"]:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px rgba(232,74,30,0.15);
+  }
+  input[type="text"], input[type="url"] {
+    background: var(--navy-deep);
+    border: 1.5px solid var(--navy-line);
+    color: var(--cream);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 13px;
+    width: 100%;
+  }
+
+  .help-text {
+    font-size: 12.5px;
+    color: var(--cream-dim);
+    margin-top: 8px;
+    line-height: 1.55;
+  }
+
+  /* ---------- Outputs ---------- */
+  .results { margin-top: 24px; }
+  .result-block {
+    padding: 22px 24px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+  .result-primary {
+    background: linear-gradient(135deg, var(--orange) 0%, #c93810 100%);
+    color: white;
+    text-align: center;
+    box-shadow: 0 6px 20px rgba(232,74,30,0.3);
+  }
+  .result-primary .label {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .result-primary .value {
+    font-family: 'Bebas Neue', 'Oswald', sans-serif;
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: 0.02em;
+    line-height: 1.05;
+  }
+  .result-primary .sub {
+    font-size: 12px;
+    opacity: 0.9;
+    margin-top: 6px;
+  }
+
+  .result-secondary {
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .result-secondary .label {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--cream-dim);
+    font-weight: 600;
+  }
+  .result-secondary .label .pos-token {
+    color: var(--gold);
+  }
+  .result-secondary .value {
+    font-family: 'Bebas Neue', 'Oswald', sans-serif;
+    font-size: 28px;
+    color: var(--gold);
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- Detail panel ---------- */
+  details {
+    margin-top: 14px;
+    background: var(--navy-deep);
+    border: 1px solid var(--navy-line);
+    border-radius: 8px;
+    padding: 0;
+  }
+  details > summary {
+    cursor: pointer;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--cream-dim);
+    list-style: none;
+    user-select: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::before {
+    content: "▸";
+    display: inline-block;
+    margin-right: 8px;
+    transition: transform 0.15s;
+  }
+  details[open] > summary::before { transform: rotate(90deg); }
+  details .body {
+    padding: 0 16px 14px;
+    font-size: 13px;
+  }
+  table.players { width: 100%; border-collapse: collapse; }
+  table.players th, table.players td {
+    text-align: left;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--navy-line);
+  }
+  table.players th {
+    color: var(--cream-dim);
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  table.players td.salary { font-variant-numeric: tabular-nums; text-align: right; }
+  table.players tr.highlight { background: rgba(232,74,30,0.12); }
+
+  /* ---------- Status / footer ---------- */
+  .status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+    margin-bottom: 18px;
+    font-size: 12px;
+    color: var(--cream-dim);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    background: var(--green);
+  }
+  .status-dot.warn { background: var(--gold); }
+  .status-dot.err { background: var(--red); }
+
+  .btn {
+    background: transparent;
+    border: 1px solid var(--navy-line);
+    color: var(--cream-dim);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--orange-soft); color: var(--orange-soft); }
+  .btn-primary {
+    background: var(--orange);
+    border-color: var(--orange);
+    color: white;
+    font-weight: 600;
+  }
+  .btn-primary:hover { background: #d63d11; border-color: #d63d11; color: white; }
+
+  /* ---------- Settings modal ---------- */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal {
+    background: var(--navy-card);
+    border: 1px solid var(--navy-line);
+    border-radius: var(--radius);
+    padding: 24px;
+    max-width: 540px;
+    width: 100%;
+    box-shadow: var(--shadow);
+  }
+  .modal h3 {
+    font-family: 'Bebas Neue', 'Oswald', sans-serif;
+    color: var(--orange);
+    margin: 0 0 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .modal label { display: block; font-size: 12px; color: var(--cream-dim); margin: 14px 0 6px; }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+  /* ---------- Empty state ---------- */
+  .placeholder {
+    text-align: center;
+    color: var(--cream-dim);
+    padding: 40px 20px;
+    font-size: 14px;
+    border: 1.5px dashed var(--navy-line);
+    border-radius: 10px;
+  }
+
+  .footer-note {
+    text-align: center;
+    color: var(--cream-dim);
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    margin-top: 30px;
+    opacity: 0.75;
+  }
+
+  @media (max-width: 520px) {
+    .header { gap: 12px; padding-bottom: 14px; margin-bottom: 18px; }
+    .logo-box { width: 64px; }
+    h1 { font-size: 16px; letter-spacing: 0.05em; }
+    .pos-grid { grid-template-columns: repeat(3, 1fr); }
+    .result-primary .value { font-size: 42px; }
+    .card { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+
+    <!-- ============== Header ============== -->
+    <header class="header">
+      <div class="logo-box">
+        <!-- Loads logo.png if present; falls back to inline SVG monogram -->
+        <img id="logo-img" src="./logo.png" alt="Rising Phoenix" onerror="this.style.display='none';document.getElementById('logo-fallback').style.display='block';" />
+        <svg id="logo-fallback" class="fallback" viewBox="0 0 200 110" style="display:none">
+          <rect x="1" y="1" width="198" height="108" rx="10" fill="#0c1a3a" stroke="#e84a1e" stroke-width="2"/>
+          <text x="100" y="74" text-anchor="middle" fill="#f0e6d2" font-family="'Bebas Neue','Oswald',sans-serif" font-size="60" font-weight="700" letter-spacing="2">RP</text>
+        </svg>
+      </div>
+      <h1><span class="brand">Rising Phoenix Football</span> Contract Extension Calculator</h1>
+    </header>
+
+    <!-- ============== Status bar ============== -->
+    <div class="status-bar">
+      <div id="data-status">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="status-text">Loading salary data…</span>
+      </div>
+    </div>
+
+    <!-- ============== Calculator card ============== -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Calculate Extension</h2>
+        <button class="reset-btn" onclick="resetCalculator()" title="Clear position and rank">
+          <span class="icon">↻</span>
+          <span>Reset</span>
+        </button>
+      </div>
+
+      <label class="field-label">1. Select position</label>
+      <div class="pos-grid" id="position-grid">
+        <button class="pos-chip" data-pos="QB">QB</button>
+        <button class="pos-chip" data-pos="RB">RB</button>
+        <button class="pos-chip" data-pos="WR">WR</button>
+        <button class="pos-chip" data-pos="TE">TE</button>
+        <button class="pos-chip" data-pos="K">K</button>
+        <button class="pos-chip" data-pos="DEF">DEF</button>
+      </div>
+
+      <div class="input-row">
+        <label class="field-label">2. Player's positional rank</label>
+        <input type="number" id="rank-input" min="1" max="9999" placeholder="e.g. 12" />
+        <p class="help-text">
+          Enter the player's <strong>positional rank</strong> per
+          <a href="https://www.cbssports.com/fantasy/football/rankings/ppr/top200/" target="_blank" rel="noopener">CBS Top 200 PPR rankings</a>. Filter or scroll to your selected position and use the player's rank within that position. For example, if Randy Moss is the 4th-ranked WR on the list, you enter <strong>4</strong>. The resulting salary value is the extension value. You can choose a 1, 2, or 3 year extension for your player by submitting it to the commissioner's office.
+          <br /><br />
+          <strong>Floor rule:</strong> If the calculator value comes out lower than the player's current salary, their extension is instead 120% of their current salary (i.e. current&nbsp;+&nbsp;20%).
+        </p>
+      </div>
+
+      <!-- ============== Results ============== -->
+      <div class="results" id="results-area">
+        <div class="placeholder" id="placeholder">
+          Pick a position and enter a rank to see the recommended extension value.
+        </div>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      Rising Phoenix Football <span id="footer-year">2026</span> • Methodology: extension value = average salary of ranks N&minus;3 through N+3 at the selected position; franchise tag = average of the top 5 salaries at the selected position • <strong>Franchise Tag override:</strong> if a player's current salary already exceeds the position's franchise tag value, the franchise tag is instead 120% of the player's current contract • Players may be franchised for a maximum of two years, and only in consecutive seasons.
+    </p>
+
+  </div>
+
+
+<script>
+/* ============================================================
+   Configuration
+   ============================================================ */
+// Default Google Sheet CSV URL (commissioner edits this once and pushes).
+// Leave blank to fall back to ./salaries.csv next to this HTML file.
+const DEFAULT_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQRzB4lFiunDn6U3ExNsIN6WOUXhTYuUGiGXXCnCbmqH2jJOQynFFUL2S1kExN1bIP9YdCJiEcNZ5IK/pub?gid=370237469&single=true&output=csv";
+
+// Window size for the +/- N average around the entered rank.
+// Window includes the rank itself: rank N -> N-3 .. N+3 (up to 7 players).
+const WINDOW = 3;
+
+// Franchise Tag = average of the top N salaries AT THAT POSITION (position-specific).
+// Per league rules: average of the 5 highest-paid salaries at the position.
+const FRANCHISE_TAG_TOP_N = 5;
+
+// Round the recommended extension to nearest $X for display.
+const ROUND_TO = 100000;
+
+// League minimum salary — the calculator will never output a value below this.
+const MIN_EXTENSION = 575000;
+
+/* ============================================================
+   State
+   ============================================================ */
+let players = [];          // [{name, team, positions:[..], salary:Number}]
+let selectedPosition = null;
+let lastRank = null;
+
+const POS_LIST = ["QB","RB","WR","TE","K","DEF"];
+
+/* ============================================================
+   CSV loading
+   ============================================================ */
+async function loadData() {
+  const overrideUrl  = localStorage.getItem("rp_csv_url") || "";
+  const overrideData = localStorage.getItem("rp_csv_data") || "";
+
+  // Source priority:
+  //   1. User-uploaded CSV (localStorage)
+  //   2. User-configured Google Sheet URL (localStorage)
+  //   3. DEFAULT_CSV_URL constant (commissioner sets at deploy time)
+  //   4. ./salaries.csv next to this file (only works on a real http(s) host)
+  //   5. Inline CSV embedded at the bottom of this HTML (always works, even from file://)
+  const sources = [];
+  if (overrideData) sources.push({ kind: "memory", label: "uploaded CSV", data: overrideData });
+  if (overrideUrl)  sources.push({ kind: "url",    label: "configured Google Sheet", url: overrideUrl });
+  if (DEFAULT_CSV_URL) sources.push({ kind: "url", label: "default Google Sheet", url: DEFAULT_CSV_URL });
+  sources.push({ kind: "url",      label: "bundled salaries.csv", url: "./salaries.csv" });
+  sources.push({ kind: "embedded", label: "embedded snapshot" });
+
+  for (const src of sources) {
+    try {
+      let text;
+      if (src.kind === "memory") {
+        text = src.data;
+      } else if (src.kind === "embedded") {
+        const el = document.getElementById("bundled-csv");
+        if (!el || !el.textContent.trim()) throw new Error("no embedded CSV");
+        text = el.textContent;
+      } else {
+        text = await fetchCsv(src.url);
+      }
+      const parsed = parseCsv(text);
+      const normalized = normalize(parsed);
+      if (!normalized.length) throw new Error("CSV produced 0 valid rows");
+      players = normalized;
+      const note = src.kind === "embedded" ? " (built-in fallback)" : "";
+      setStatus("ok", `Loaded ${players.length.toLocaleString()} players from ${src.label}.${note}`);
+      recomputeIfReady();
+      return;
+    } catch (err) {
+      console.warn(`Source failed (${src.label}):`, err);
+    }
+  }
+
+  setStatus("err", "Couldn't load salary data. Open ⚙ Settings to set a CSV URL or upload a file.");
+}
+
+async function fetchCsv(url) {
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return await res.text();
+}
+
+/* ----- CSV parser (handles quoted fields w/ commas) ----- */
+function parseCsv(text) {
+  const rows = [];
+  let cur = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else { inQuotes = false; }
+      } else { field += c; }
+    } else {
+      if (c === '"') { inQuotes = true; }
+      else if (c === ",") { cur.push(field); field = ""; }
+      else if (c === "\n") { cur.push(field); rows.push(cur); cur = []; field = ""; }
+      else if (c === "\r") { /* ignore */ }
+      else { field += c; }
+    }
+  }
+  if (field.length || cur.length) { cur.push(field); rows.push(cur); }
+  if (!rows.length) return [];
+  const header = rows.shift().map(h => h.trim());
+  return rows.filter(r => r.length === header.length).map(r => {
+    const o = {};
+    header.forEach((h, idx) => { o[h] = r[idx]; });
+    return o;
+  });
+}
+
+/* ----- Normalize one row from the Fantrax CSV ----- */
+function normalize(rows) {
+  const out = [];
+  for (const r of rows) {
+    const name = (r.Player || "").trim();
+    if (!name) continue;
+
+    const salaryRaw = (r.Salary || "").replace(/[^0-9.]/g, "");
+    const salary = parseFloat(salaryRaw);
+    if (!isFinite(salary) || salary <= 0) continue;
+
+    const posRaw = (r.Position || "").trim();
+    if (!posRaw) continue;
+    // Normalize DEF variants first (DST, D/ST, DEFENSE) BEFORE splitting on comma
+    const posNormalized = posRaw
+      .replace(/\bD\/ST\b/gi, "DEF")
+      .replace(/\bDST\b/gi, "DEF")
+      .replace(/\bDEFENSE\b/gi, "DEF");
+    const positions = posNormalized.split(",")
+      .map(p => p.trim().toUpperCase())
+      .filter(p => p && p !== "INF");
+    if (!positions.length) continue;
+
+    out.push({
+      name,
+      team: (r.Team || "").trim(),
+      positions,
+      salary
+    });
+  }
+  return out;
+}
+
+/* ============================================================
+   Position filtering
+   ============================================================ */
+// Football positions are single-position (each player is exactly one of
+// QB, RB, WR, TE, K, DEF). Simpler than baseball — no dual eligibility.
+// Common CSV variants: DST vs DEF, D/ST — normalize before comparing.
+function eligibleAt(player, pos) {
+  return player.positions.includes(pos);
+}
+
+function poolFor(pos) {
+  return players
+    .filter(p => eligibleAt(p, pos))
+    .sort((a, b) => b.salary - a.salary);
+}
+
+/* ============================================================
+   Calculations
+   ============================================================ */
+// Per-position franchise tag: average of the top N salaries in the given pool.
+// The 120%-of-current-salary override is an administrative rule applied by
+// the commissioner; the base value is what we display.
+function franchiseTag(pool) {
+  if (!pool || !pool.length) return null;
+  const top = pool.slice(0, FRANCHISE_TAG_TOP_N);
+  const sum = top.reduce((s, p) => s + p.salary, 0);
+  return { value: sum / top.length, players: top };
+}
+
+function extensionValue(pool, rank) {
+  if (!pool.length || !rank || rank < 1) return null;
+  // 0-indexed: rank N maps to index N-1
+  const idx = rank - 1;
+  const lo = Math.max(0, idx - WINDOW);
+  const hi = Math.min(pool.length - 1, idx + WINDOW);
+  const slice = pool.slice(lo, hi + 1);
+  if (!slice.length) return null;
+  const sum = slice.reduce((s, p) => s + p.salary, 0);
+  const rawAvg = sum / slice.length;
+  // League minimum floor
+  const value = Math.max(rawAvg, MIN_EXTENSION);
+  return {
+    value,
+    rawValue: rawAvg,
+    floorApplied: value > rawAvg,
+    players: slice,
+    rangeStart: lo + 1,
+    rangeEnd: hi + 1,
+    targetIdx: idx,
+    poolSize: pool.length
+  };
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+function fmt$(n) {
+  return "$" + Math.round(n).toLocaleString();
+}
+function fmtRound(n) {
+  return "$" + (Math.round(n / ROUND_TO) * ROUND_TO).toLocaleString();
+}
+
+function setStatus(kind, msg) {
+  document.getElementById("status-text").textContent = msg;
+  const dot = document.getElementById("status-dot");
+  dot.classList.remove("warn", "err");
+  if (kind === "warn") dot.classList.add("warn");
+  if (kind === "err")  dot.classList.add("err");
+}
+
+function recomputeIfReady() {
+  const out = document.getElementById("results-area");
+  if (!players.length) {
+    out.innerHTML = `<div class="placeholder">Loading salary data…</div>`;
+    return;
+  }
+
+  // Resolve position-dependent inputs once
+  let pool = null, ext = null, tag = null;
+  if (selectedPosition) {
+    pool = poolFor(selectedPosition);
+    if (pool.length) {
+      const rank = parseInt(document.getElementById("rank-input").value, 10);
+      lastRank = isFinite(rank) && rank >= 1 ? rank : null;
+      ext = lastRank ? extensionValue(pool, lastRank) : null;
+      tag = franchiseTag(pool);
+    }
+  }
+
+  let html = "";
+
+  // 1) Extension value (or relevant placeholder)
+  if (!selectedPosition) {
+    html += `<div class="placeholder">Pick a position and enter a rank to see the recommended extension value.</div>`;
+  } else if (pool && !pool.length) {
+    html += `<div class="placeholder">No players found at position <strong>${selectedPosition}</strong>. Check your CSV.</div>`;
+  } else if (ext) {
+    let sub = `Based on ranks ${ext.rangeStart}–${ext.rangeEnd} (${ext.players.length} players) at ${selectedPosition}`;
+    if (ext.floorApplied) {
+      sub += ` &nbsp;·&nbsp; league minimum applied (raw avg ${fmt$(ext.rawValue)})`;
+    }
+    html += `
+      <div class="result-block result-primary">
+        <div class="label">Recommended extension value</div>
+        <div class="value">${fmt$(ext.value)}</div>
+        <div class="sub">${sub}</div>
+      </div>`;
+  } else {
+    html += `
+      <div class="result-block result-secondary">
+        <div class="label">Enter a rank to compute extension</div>
+        <div class="value">—</div>
+      </div>`;
+  }
+
+  // 2) Franchise Tag (position-specific, shown when a position is selected)
+  if (tag) {
+    html += `
+      <div class="result-block result-secondary">
+        <div class="label">Franchise Tag <span class="pos-token">(${selectedPosition})</span></div>
+        <div class="value">${fmtRound(tag.value)}</div>
+      </div>`;
+  }
+
+  // 3) Players in the extension calculation (expandable, only when relevant)
+  if (ext) {
+    html += renderPlayerTable("Players in extension calculation", ext.players, ext.targetIdx - (ext.rangeStart - 1), ext.rangeStart);
+  }
+
+  // 4) Top 5 salaries at this position (franchise tag inputs)
+  if (tag) {
+    html += renderPlayerTable(`Top ${tag.players.length} salaries at ${selectedPosition} (franchise tag inputs)`, tag.players, -1, 1);
+  }
+
+  out.innerHTML = html;
+}
+
+function renderPlayerTable(title, list, highlightIdx, startRank = 1) {
+  let rows = "";
+  list.forEach((p, i) => {
+    const cls = (i === highlightIdx) ? "highlight" : "";
+    const rank = startRank + i;
+    rows += `<tr class="${cls}">
+      <td>${rank}</td>
+      <td>${escapeHtml(p.name)}</td>
+      <td>${escapeHtml(p.team)}</td>
+      <td>${p.positions.join("/")}</td>
+      <td class="salary">${fmt$(p.salary)}</td>
+    </tr>`;
+  });
+  return `
+    <details open>
+      <summary>${escapeHtml(title)}</summary>
+      <div class="body">
+        <table class="players">
+          <thead><tr><th>Rank</th><th>Player</th><th>Team</th><th>Pos</th><th style="text-align:right">Salary</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </details>`;
+}
+
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;");
+}
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+document.querySelectorAll(".pos-chip").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".pos-chip").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    selectedPosition = btn.dataset.pos;
+    localStorage.setItem("rp_pos", selectedPosition);
+    recomputeIfReady();
+  });
+});
+
+document.getElementById("rank-input").addEventListener("input", () => {
+  recomputeIfReady();
+});
+
+// Restore last position
+const savedPos = localStorage.getItem("rp_pos");
+if (savedPos && POS_LIST.includes(savedPos)) {
+  const btn = document.querySelector(`.pos-chip[data-pos="${savedPos}"]`);
+  if (btn) { btn.classList.add("active"); selectedPosition = savedPos; }
+}
+
+/* ============================================================
+   Reset
+   ============================================================ */
+function resetCalculator() {
+  document.querySelectorAll(".pos-chip").forEach(b => b.classList.remove("active"));
+  selectedPosition = null;
+  localStorage.removeItem("rp_pos");
+  const rankInput = document.getElementById("rank-input");
+  rankInput.value = "";
+  lastRank = null;
+  recomputeIfReady();
+  rankInput.blur();
+  // Scroll to top of calculator card so the user sees the cleared state
+  document.querySelector(".card").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ============================================================
+   Boot
+   ============================================================ */
+const yearEl = document.getElementById("footer-year");
+if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
+loadData();
+</script>
+
+<!-- ============================================================
+     Embedded CSV snapshot (fallback when no Google Sheet URL is set
+     and no companion salaries.csv is available — e.g. when this file
+     is opened directly with file://). Update this block by re-running
+     the build process, or just rely on the Google Sheet URL in production.
+     ============================================================ -->
+<script type="text/csv" id="bundled-csv"><!-- Football salary CSV will be embedded here as offline fallback --></script>
+
+</body>
+</html>
